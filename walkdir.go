@@ -21,15 +21,19 @@ func fileList() {
 					log.Println("错误：无法访问文件夹:", err)
 					return err
 				}
-				fontPathList = append(fontPathList, []string{absPath})
+				var newInfo FontInfo = FontInfo{
+					FontPath: absPath,
+				}
+				fontPathList = append(fontPathList, newInfo)
 			}
 		}
 		return nil
 	})
+	fontPathListLen = len(fontPathList)
 	if err != nil {
 		log.Println("错误：无法遍历文件夹:", err)
 	} else {
-		log.Println("搜索到字体:", len(fontPathList))
+		log.Println("搜索到字体:", fontPathListLen)
 	}
 }
 

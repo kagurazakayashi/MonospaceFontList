@@ -7,11 +7,21 @@ import (
 	"time"
 )
 
+type FontInfo struct {
+	FontPath      string
+	Name          string
+	Family        string
+	SubfamilyName string
+	Version       string
+	UnitsPerEm    int
+}
+
 var (
-	scanDir        string
-	extensionNames string
-	timeLayout     string     = "2006-01-02 15:04:05"
-	fontPathList   [][]string = [][]string{}
+	scanDir         string
+	extensionNames  string
+	timeLayout      string     = "2006-01-02 15:04:05"
+	fontPathList    []FontInfo = []FontInfo{}
+	fontPathListLen int
 )
 
 func main() {
@@ -29,4 +39,5 @@ func main() {
 	}
 	fileList()
 	fontInfo()
+	outJSONInfo()
 }
