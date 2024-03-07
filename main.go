@@ -14,6 +14,7 @@ type FontInfo struct {
 	SubfamilyName string
 	Version       string
 	UnitsPerEm    int
+	Monospaced    int // -1: 不等宽, 0: 未知, 1+: 等宽宽度
 }
 
 var (
@@ -22,12 +23,15 @@ var (
 	timeLayout      string     = "2006-01-02 15:04:05"
 	fontPathList    []FontInfo = []FontInfo{}
 	fontPathListLen int
+	enTestChars     string
+	monospacedTotal uint = 0
 )
 
 func main() {
 	log.Println("MonospaceFontList 0.0.1  " + time.Now().Format(timeLayout))
 	flag.StringVar(&scanDir, "i", "", "要扫描的字体文件夹，默认为系统字体文件夹")
 	flag.StringVar(&extensionNames, "e", "ttf,otf,ttc", "要扫描的字体文件扩展名，用 `,` 分隔。默认为 `ttf,otf,ttc` 。")
+	flag.StringVar(&enTestChars, "en", "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789", "英文测试字符")
 	flag.Parse()
 
 	if len(scanDir) == 0 {
@@ -39,5 +43,8 @@ func main() {
 	}
 	fileList()
 	fontInfo()
-	outJSONInfo()
+	// outJSONInfo()
+	log.Println("字体信息收集完成。")
+	log.Println("字体数量:", fontPathListLen)
+	log.Println("等宽字体数量:", monospacedTotal)
 }

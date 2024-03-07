@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 
 	"golang.org/x/image/font/sfnt"
+	"golang.org/x/image/math/fixed"
 )
 
 func fontInfo() {
@@ -15,7 +16,7 @@ func fontInfo() {
 		var ii string = fmt.Sprintf("%d / %d", i+1, fontPathListLen)
 		fontFile, err := os.ReadFile(fontinfo.FontPath)
 
-		fmt.Printf("\r\033[K正在获取字体信息: %s", ii)
+		fmt.Printf("\r\033[K正在获取字体信息: %s  ", ii)
 
 		if err != nil {
 			log.Printf("错误：无法打开文件 %s : %v", fontinfo.FontPath, err)
@@ -48,6 +49,10 @@ func fontInfo() {
 		}
 
 		fontinfo.UnitsPerEm = int(font.UnitsPerEm())
+		fontinfo.Monospaced = isMonospaced(font, enTestChars)
+		if fontinfo.Monospaced > 0 {
+			monospacedTotal++
+		}
 		fontPathList[i] = fontinfo
 	}
 }
@@ -59,4 +64,25 @@ func outJSONInfo() {
 		return
 	}
 	log.Println(string(jsonData))
+}
+
+func isMonospaced(font *sfnt.Font, testChars string) int {
+	var oldWidth fixed.Int26_6 = 0
+	for i, ch := range testChars {
+		buf := &sfnt.Buffer{}
+		mIndex, err := font.GlyphIndex(buf, ch)
+		if err != nil {
+			log.Printf("错误：获取字符“ %c ”的索引失败: %v", ch, err)
+		}
+		mWidth, err := font.GlyphAdvance(buf, mIndex, fixed.Int26_6(font.UnitsPerEm()), 0)
+		if err != nil {
+			log.Printf("错误：获取字符“ %c ”的宽度失败: %v", ch, err)
+		}
+		if i == 0 {
+			oldWidth = mWidth
+		} else if oldWidth != mWidth {
+			return -1
+		}
+	}
+	return int(oldWidth)
 }
