@@ -50,8 +50,18 @@ func fontInfo() {
 
 		fontinfo.UnitsPerEm = int(font.UnitsPerEm())
 		fontinfo.Monospaced = isMonospaced(font, enTestChars)
-		if fontinfo.Monospaced > 0 {
-			monospacedTotal++
+		if isSupportsChinese(font) {
+			chineseTotal++
+			fontinfo.MonospacedZH = isMonospaced(font, zhTestChars)
+			if fontinfo.MonospacedZH > 0 {
+				monospacedTotal++
+				chineseMonoTotal++
+			}
+		} else {
+			fontinfo.MonospacedZH = -2
+			if fontinfo.Monospaced > 0 {
+				monospacedTotal++
+			}
 		}
 		fontPathList[i] = fontinfo
 	}
@@ -64,6 +74,16 @@ func outJSONInfo() {
 		return
 	}
 	log.Println(string(jsonData))
+}
+
+func isSupportsChinese(font *sfnt.Font) bool {
+	for runeValue := rune(0x4E00); runeValue <= 0x9FFF; runeValue++ {
+		_, err := font.GlyphIndex(&sfnt.Buffer{}, runeValue)
+		if err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 func isMonospaced(font *sfnt.Font, testChars string) int {
