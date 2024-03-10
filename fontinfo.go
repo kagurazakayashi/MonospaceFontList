@@ -2,11 +2,17 @@ package main
 
 import (
 	"fmt"
+	"image"
+	"image/color"
+	"image/draw"
+	"image/png"
 	"log"
 	"os"
 
 	"encoding/json"
 
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/font/sfnt"
 	"golang.org/x/image/math/fixed"
 )
@@ -53,7 +59,7 @@ func fontInfo() {
 		if isSupportsChinese(font) {
 			chineseTotal++
 			fontinfo.MonospacedZH = isMonospaced(font, zhTestChars)
-			if fontinfo.MonospacedZH > 0 {
+			if fontinfo.Monospaced > 0 && fontinfo.MonospacedZH > 0 {
 				monospacedTotal++
 				chineseMonoTotal++
 			}
@@ -63,6 +69,7 @@ func fontInfo() {
 				monospacedTotal++
 			}
 		}
+		drew(fontFile, fontinfo.Name)
 		fontPathList[i] = fontinfo
 	}
 }
@@ -105,4 +112,59 @@ func isMonospaced(font *sfnt.Font, testChars string) int {
 		}
 	}
 	return int(oldWidth)
+}
+
+func drew(fontFile []byte, name string) {
+	f, err := opentype.Parse(fontFile)
+	if err != nil {
+		log.Println("解析字体失败:", name, err)
+		return
+	}
+
+	face, err := opentype.NewFace(f, &opentype.FaceOptions{
+		Size:    fontSize,
+		DPI:     72,
+		Hinting: font.HintingFull,
+	})
+	if err != nil {
+		log.Println("创建字体face失败:", name, err)
+		return
+	}
+	defer face.Close()
+
+	img := image.NewRGBA(image.Rect(0, 0, 300, 100))
+	draw.Draw(img, img.Bounds(), image.NewUniform(color.White), image.Point{}, draw.Src)
+
+	point := fixed.Point26_6{
+		X: fixed.I(10),
+		Y: fixed.I(30),
+	}
+
+	d := &font.Drawer{
+		Dst:  img,
+		Src:  image.NewUniform(color.Black),
+		Face: face,
+		Dot:  point,
+	}
+	d.DrawString("AaBbCc0123?.文字。")
+
+	//创建文件夹out
+	if _, err := os.Stat(outDir); os.IsNotExist(err) {
+		os.Mkdir(outDir, os.ModePerm)
+	}
+	var pngFile string = outDir + "/" + name + ".png"
+	// pngFile = strings.Replace(pngFile, " ", "_", -1)
+	outFile, err := os.Create(pngFile)
+	if err != nil {
+		log.Println("创建图片文件失败:", err)
+		return
+	}
+	defer outFile.Close()
+
+	err = png.Encode(outFile, img)
+	if err != nil {
+		log.Println("图片保存失败:", err)
+		return
+	}
+	// log.Println("图片已保存为 ", pngFile)
 }

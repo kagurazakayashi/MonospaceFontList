@@ -29,14 +29,18 @@ var (
 	chineseTotal     uint = 0
 	chineseMonoTotal uint = 0
 	monospacedTotal  uint = 0
+	fontSize         float64
+	outDir           string
 )
 
 func main() {
 	log.Println("MonospaceFontList 0.0.1  " + time.Now().Format(timeLayout))
 	flag.StringVar(&scanDir, "i", "", "要扫描的字体文件夹，默认为系统字体文件夹")
 	flag.StringVar(&extensionNames, "e", "ttf,otf,ttc", "要扫描的字体文件扩展名，用 `,` 分隔。默认为 `ttf,otf,ttc` 。")
-	flag.StringVar(&enTestChars, "en", "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789", "英文测试字符")
-	flag.StringVar(&zhTestChars, "zh", "你好，世界！", "中文测试字符")
+	flag.StringVar(&enTestChars, "en", "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789", "英文测试字符列表，默认大小写字母和数字。")
+	flag.StringVar(&zhTestChars, "zh", "正，一丨中！小。", "中文测试字符列表。")
+	flag.Float64Var(&fontSize, "fs", 20, "字体预览图所使用的字体大小。")
+	flag.StringVar(&outDir, "o", "out", "输出文件夹，不带结尾 `/` 。默认为 `当前文件夹/out` 。")
 	flag.Parse()
 
 	if len(scanDir) == 0 {
