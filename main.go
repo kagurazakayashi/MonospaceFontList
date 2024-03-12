@@ -16,6 +16,7 @@ type FontInfo struct {
 	UnitsPerEm    int
 	Monospaced    int // -1: 不等宽, 0: 未知, 1+: 等宽宽度
 	MonospacedZH  int // -2: 不支持中文, -1: 不等宽, 0: 未知, 1+: 等宽宽度
+	MD5           string
 }
 
 var (
@@ -31,6 +32,11 @@ var (
 	monospacedTotal  uint = 0
 	fontSize         float64
 	outDir           string
+	imageTop         int
+	imageLeft        int
+	imageWidth       int
+	imageHeight      int
+	imageText        string
 )
 
 func main() {
@@ -39,8 +45,13 @@ func main() {
 	flag.StringVar(&extensionNames, "e", "ttf,otf,ttc", "要扫描的字体文件扩展名，用 `,` 分隔。默认为 `ttf,otf,ttc` 。")
 	flag.StringVar(&enTestChars, "en", "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789", "英文测试字符列表，默认大小写字母和数字。")
 	flag.StringVar(&zhTestChars, "zh", "正，一丨中！小。", "中文测试字符列表。")
-	flag.Float64Var(&fontSize, "fs", 20, "字体预览图所使用的字体大小。")
+	flag.Float64Var(&fontSize, "fs", 64, "字体预览图所使用的字体大小。")
 	flag.StringVar(&outDir, "o", "out", "输出文件夹，不带结尾 `/` 。默认为 `当前文件夹/out` 。")
+	flag.IntVar(&imageLeft, "x", 10, "字体预览图左侧空白。")
+	flag.IntVar(&imageTop, "y", 64, "字体预览图顶部空白。")
+	flag.IntVar(&imageWidth, "w", 800, "字体预览图宽度。")
+	flag.IntVar(&imageHeight, "h", 78, "字体预览图高度。")
+	flag.StringVar(&imageText, "t", "AaBbCc0123?.文字。", "字体预览图文字。")
 	flag.Parse()
 
 	if len(scanDir) == 0 {

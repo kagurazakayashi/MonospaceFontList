@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/md5"
 	"fmt"
 	"image"
 	"image/color"
@@ -69,7 +70,9 @@ func fontInfo() {
 				monospacedTotal++
 			}
 		}
-		drew(fontFile, fontinfo.Name)
+
+		fontinfo.MD5 = fmt.Sprintf("%x", md5.Sum(fontFile))
+		drew(fontFile, fontinfo.MD5)
 		fontPathList[i] = fontinfo
 	}
 }
@@ -132,12 +135,12 @@ func drew(fontFile []byte, name string) {
 	}
 	defer face.Close()
 
-	img := image.NewRGBA(image.Rect(0, 0, 300, 100))
+	img := image.NewRGBA(image.Rect(0, 0, imageWidth, imageHeight))
 	draw.Draw(img, img.Bounds(), image.NewUniform(color.White), image.Point{}, draw.Src)
 
 	point := fixed.Point26_6{
-		X: fixed.I(10),
-		Y: fixed.I(30),
+		X: fixed.I(imageLeft),
+		Y: fixed.I(imageTop),
 	}
 
 	d := &font.Drawer{
@@ -146,9 +149,8 @@ func drew(fontFile []byte, name string) {
 		Face: face,
 		Dot:  point,
 	}
-	d.DrawString("AaBbCc0123?.文字。")
+	d.DrawString(imageText)
 
-	//创建文件夹out
 	if _, err := os.Stat(outDir); os.IsNotExist(err) {
 		os.Mkdir(outDir, os.ModePerm)
 	}
