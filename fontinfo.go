@@ -89,24 +89,27 @@ func outJSONInfo() {
 func isSupportsChinese(font *sfnt.Font) bool {
 	// 定义中文Unicode区块
 	var chineseUnicodeRanges [][]int = [][]int{
-		{0x4E00, 0x9FFF},   // 基本汉字
-		{0x3400, 0x4DBF},   // 扩展A
-		{0x20000, 0x2A6DF}, // 扩展B
-		{0x2A700, 0x2B73F}, // 扩展C
-		{0x2B740, 0x2B81F}, // 扩展D
-		{0x2B820, 0x2CEAF}, // 扩展E
-		{0x2CEB0, 0x2EBEF}, // 扩展F
-		{0x30000, 0x3134F}, // 扩展G
+		{0x4E00, 0x9FFF},   // 0基本汉字
+		{0x3400, 0x4DBF},   // 1扩展A
+		{0x20000, 0x2A6DF}, // 2扩展B
+		{0x2A700, 0x2B73F}, // 3扩展C
+		{0x2B740, 0x2B81F}, // 4扩展D
+		{0x2B820, 0x2CEAF}, // 5扩展E
+		{0x2CEB0, 0x2EBEF}, // 6扩展F
+		{0x30000, 0x3134F}, // 7扩展G
 	}
-	for _, rangeValue := range chineseUnicodeRanges {
+	for i, rangeValue := range chineseUnicodeRanges {
+		if i > chineseChkLevel {
+			break
+		}
 		for runeValue := rune(rangeValue[0]); runeValue <= rune(rangeValue[1]); runeValue++ {
 			_, err := font.GlyphIndex(&sfnt.Buffer{}, runeValue)
-			if err == nil {
-				return true
+			if err != nil {
+				return false
 			}
 		}
 	}
-	return false
+	return true
 }
 
 func isMonospaced(font *sfnt.Font, testChars string) int {
