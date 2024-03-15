@@ -1,54 +1,60 @@
 package main
 
 import (
+	"bufio"
+	"log"
 	"os"
 	"strconv"
 	"strings"
 )
 
-var htmlTemp string = `
-<!DOCTYPE html>
-<html lang="zh-CN">
+var (
+	htmlTemp     string = ""
+	htmlBodyTemp string = ""
+)
 
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport"
-		content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0,minimal-ui:ios">
-	<meta http-equiv="X-UA-Compatible" content="ie=edge">
-	<title>!TITLE!</title>
-</head>
-
-<body>
-!BODY!
-</body>
-</html>
-`
-
-var htmlBodyTemp string = `
-<p class="fontInfo" id="!MD5!">
-    <div>
-        <strong class="fontName">!NAME!</strong>&nbsp;
-        <span class="fontFamily">!FAMILY!</span>&nbsp;
-        <span class="fontFamily">(!STYLE!)</span>&nbsp;
-		<span class="fontVersion">!VERSION!</span>
-		<code class="fontMonospaced!MONOSPACEDC!">!MONOSPACED!</code>&nbsp;
-		<code class="fontChinese!ZHC!">!ZH!</code>
-    </div>
-    <div>
-        <code class="fontFile">!FILE!</code>&nbsp;
-        <code class="fontMD5">(!MD5!)</code>&nbsp;
-    </div>
-    <img src="!MD5!.png" alt="[!NAME!] !MD5!.png" title="!NAME! [!FAMILY!] (!STYLE!)" />
-</p>
-`
+func loadHTML() {
+	var htmlPath string = "html/list.html"
+	file, err := os.Open(htmlPath)
+	if err != nil {
+		log.Println("错误：无法读取资源文件: ", err)
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	var mode int8 = 1
+	for scanner.Scan() {
+		var line string = scanner.Text()
+		if mode == 1 && strings.Contains(line, "<!-- item -->") {
+			mode = 20
+		} else if mode == 2 && strings.Contains(line, "<!-- !item -->") {
+			mode = 10
+		}
+		switch mode {
+		case 10:
+			mode = 1
+		case 1:
+			htmlTemp = htmlTemp + "\n" + line
+		case 20:
+			mode = 2
+		case 2:
+			htmlBodyTemp = htmlBodyTemp + "\n" + line
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		log.Println("错误：无法读取资源文件: ", err)
+	}
+	// fmt.Println("htmlTemp", htmlTemp)
+	// fmt.Println("htmlBodyTemp", htmlBodyTemp)
+}
 
 func genHTML() string {
-	var html string = htmlTemp
+	var html string = strings.Replace(htmlTemp, "!TITLE!", pageTitle, 1)
+	var bodys []string = []string{}
 	for _, v := range fontPathList {
 		if len(v.Name) == 0 {
 			continue
 		}
-		var body string = strings.Replace(htmlBodyTemp, "!TITLE!", pageTitle, 1)
+		var body string = htmlBodyTemp
 		body = strings.Replace(body, "!MD5!", v.MD5, -1)
 		body = strings.Replace(body, "!NAME!", v.Name, -1)
 		body = strings.Replace(body, "!FAMILY!", v.Family, -1)
@@ -65,22 +71,24 @@ func genHTML() string {
 		if v.MonospacedZH > -2 {
 			if v.MonospacedZH > 0 {
 				body = strings.Replace(body, "!ZH!", "[中文等宽 "+strconv.Itoa(v.MonospacedZH)+"]", -1)
-				body = strings.Replace(body, "!ZHC!", "zh_monospaced", -1)
+				body = strings.Replace(body, "!ZHC!", " zh_monospaced", -1)
 			} else {
 				body = strings.Replace(body, "!ZH!", "[中文]", -1)
-				body = strings.Replace(body, "!ZHC!", "zh", -1)
+				body = strings.Replace(body, "!ZHC!", " zh", -1)
 			}
 		} else {
 			body = strings.Replace(body, "!ZH!", "", -1)
 			body = strings.Replace(body, "!ZHC!", "", -1)
 		}
-		html = strings.Replace(html, "!BODY!", body+"!BODY!", -1)
+		bodys = append(bodys, body)
 	}
-	return strings.Replace(html, "!BODY!", "", 1)
+	var body = strings.Join(bodys, "\n")
+	return strings.Replace(html, "<!-- body -->", body, 1)
 }
 
 func saveHTML() {
 	var html string = genHTML()
+	// fmt.Println("html", html)
 	var htmlPath string = outDir + "/index.html"
 	os.WriteFile(htmlPath, []byte(html), 0644)
 }
