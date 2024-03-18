@@ -4,7 +4,7 @@ import (
 	"flag"
 	"log"
 	"os"
-	"time"
+	"runtime"
 )
 
 type FontInfo struct {
@@ -29,6 +29,7 @@ var (
 	zhTestChars      string
 	chineseTotal     uint = 0
 	chineseMonoTotal uint = 0
+	total            uint = 0
 	chineseChkLevel  int
 	monospacedTotal  uint = 0
 	fontSize         float64
@@ -39,10 +40,11 @@ var (
 	imageHeight      int
 	imageText        string
 	pageTitle        string
+	maxGoroutines    int
 )
 
 func main() {
-	log.Println("MonospaceFontList 0.0.1  " + time.Now().Format(timeLayout))
+	log.Println("MonospaceFontList v1.0.0")
 	loadHTML()
 
 	flag.StringVar(&scanDir, "i", "", "要扫描的字体文件夹，默认为系统字体文件夹。")
@@ -58,8 +60,12 @@ func main() {
 	flag.IntVar(&imageHeight, "h", 78, "字体预览图高度")
 	flag.StringVar(&imageText, "t", "AaBbCc0123?.文字。", "字体预览图文字")
 	flag.StringVar(&pageTitle, "p", "MonospaceFontList", "网页标题前缀")
+	flag.IntVar(&maxGoroutines, "j", 0, "最大并发数")
 	flag.Parse()
 
+	if maxGoroutines <= 0 {
+		maxGoroutines = runtime.NumCPU()
+	}
 	if len(scanDir) == 0 {
 		scanDir = systemFontDir()
 	}
@@ -68,6 +74,7 @@ func main() {
 		os.Exit(1)
 	}
 	fileList()
+	log.Println("并发:", maxGoroutines)
 	fontInfo()
 	saveHTML()
 	// outJSONInfo()

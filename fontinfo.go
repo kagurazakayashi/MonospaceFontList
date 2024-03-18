@@ -9,6 +9,7 @@ import (
 	"image/png"
 	"log"
 	"os"
+	"sync"
 
 	"encoding/json"
 
@@ -18,63 +19,95 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
+var (
+	mu sync.Mutex
+	wg sync.WaitGroup
+)
+
 func fontInfo() {
-	for i, fontinfo := range fontPathList {
-		var ii string = fmt.Sprintf("%d / %d", i+1, fontPathListLen)
-		fontFile, err := os.ReadFile(fontinfo.FontPath)
-
-		fmt.Printf("\r\033[K正在获取字体信息: %s  ", ii)
-
-		if err != nil {
-			log.Printf("错误：无法打开文件 %s : %v", fontinfo.FontPath, err)
-		}
-
-		font, err := sfnt.Parse(fontFile)
-		if err != nil {
-			log.Printf("%s 错误：解析字体文件 %s 失败: %v", ii, fontinfo.FontPath, err)
-			continue
-		}
-
-		fontinfo.Name, err = font.Name(nil, sfnt.NameIDFull)
-		if err != nil {
-			log.Printf("%s 错误：获取字体名称 %s 失败: %v", ii, fontinfo.FontPath, err)
-		}
-
-		fontinfo.Family, err = font.Name(nil, sfnt.NameIDFamily)
-		if err != nil {
-			log.Printf("%s 错误：获取字体家族 %s 失败: %v", ii, fontinfo.FontPath, err)
-		}
-
-		fontinfo.SubfamilyName, err = font.Name(nil, sfnt.NameIDSubfamily)
-		if err != nil {
-			log.Printf("%s 错误：获取字体样式 %s 失败: %v", ii, fontinfo.FontPath, err)
-		}
-
-		fontinfo.Version, err = font.Name(nil, sfnt.NameIDVersion)
-		if err != nil {
-			log.Printf("%s 错误：获取字体版本 %s 失败: %v", ii, fontinfo.FontPath, err)
-		}
-
-		fontinfo.UnitsPerEm = int(font.UnitsPerEm())
-		fontinfo.Monospaced = isMonospaced(font, enTestChars)
-		if isSupportsChinese(font) {
-			chineseTotal++
-			fontinfo.MonospacedZH = isMonospaced(font, zhTestChars)
-			if fontinfo.Monospaced > 0 && fontinfo.MonospacedZH > 0 {
-				monospacedTotal++
-				chineseMonoTotal++
-			}
-		} else {
-			fontinfo.MonospacedZH = -2
-			if fontinfo.Monospaced > 0 {
-				monospacedTotal++
-			}
-		}
-
-		fontinfo.MD5 = fmt.Sprintf("%x", md5.Sum(fontFile))
-		drew(fontFile, fontinfo.MD5)
-		fontPathList[i] = fontinfo
+	var goroutineSem chan struct{} = make(chan struct{}, maxGoroutines)
+	for i := range fontPathList {
+		goroutineSem <- struct{}{}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fontInfoN, tpp := work(i)
+			mu.Lock()
+			fontPathList[i] = fontInfoN
+			total += tpp[0]
+			monospacedTotal += tpp[1]
+			chineseTotal += tpp[2]
+			chineseMonoTotal += tpp[3]
+			fmt.Printf("\r\033[K已完成: %d / %d ", total, fontPathListLen)
+			mu.Unlock()
+			<-goroutineSem
+		}()
 	}
+	wg.Wait()
+}
+
+func work(i int) (FontInfo, [4]uint) {
+	var fontinfo FontInfo = fontPathList[i]
+
+	// 0okTotal,1monospacedTotal,2chineseTotal,3chineseMonoTotal
+	var tpp [4]uint = [4]uint{0, 0, 0, 0}
+
+	var ii string = fmt.Sprintf("%d / %d", i+1, fontPathListLen)
+	fontFile, err := os.ReadFile(fontinfo.FontPath)
+
+	if err != nil {
+		log.Printf("错误：无法打开文件 %s : %v", fontinfo.FontPath, err)
+		tpp[0]++
+		return fontinfo, tpp
+	}
+
+	font, err := sfnt.Parse(fontFile)
+	if err != nil {
+		log.Printf("%s 错误：解析字体文件 %s 失败: %v", ii, fontinfo.FontPath, err)
+		tpp[0]++
+		return fontinfo, tpp
+	}
+
+	fontinfo.Name, err = font.Name(nil, sfnt.NameIDFull)
+	if err != nil {
+		log.Printf("%s 错误：获取字体名称 %s 失败: %v", ii, fontinfo.FontPath, err)
+	}
+
+	fontinfo.Family, err = font.Name(nil, sfnt.NameIDFamily)
+	if err != nil {
+		log.Printf("%s 错误：获取字体家族 %s 失败: %v", ii, fontinfo.FontPath, err)
+	}
+
+	fontinfo.SubfamilyName, err = font.Name(nil, sfnt.NameIDSubfamily)
+	if err != nil {
+		log.Printf("%s 错误：获取字体样式 %s 失败: %v", ii, fontinfo.FontPath, err)
+	}
+
+	fontinfo.Version, err = font.Name(nil, sfnt.NameIDVersion)
+	if err != nil {
+		log.Printf("%s 错误：获取字体版本 %s 失败: %v", ii, fontinfo.FontPath, err)
+	}
+
+	fontinfo.UnitsPerEm = int(font.UnitsPerEm())
+	fontinfo.Monospaced = isMonospaced(font, enTestChars)
+	if isSupportsChinese(font) {
+		tpp[2]++
+		fontinfo.MonospacedZH = isMonospaced(font, zhTestChars)
+		if fontinfo.Monospaced > 0 && fontinfo.MonospacedZH > 0 {
+			tpp[1]++
+			tpp[3]++
+		}
+	} else {
+		fontinfo.MonospacedZH = -2
+		if fontinfo.Monospaced > 0 {
+			tpp[1]++
+		}
+	}
+
+	fontinfo.MD5 = fmt.Sprintf("%x", md5.Sum(fontFile))
+	drew(fontFile, fontinfo.MD5)
+	tpp[0]++
+	return fontinfo, tpp
 }
 
 func outJSONInfo() {
