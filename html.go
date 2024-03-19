@@ -9,11 +9,18 @@ import (
 )
 
 var (
+	jsTemp       string = ""
 	htmlTemp     string = ""
 	htmlBodyTemp string = ""
 )
 
 func loadHTML() {
+	var jsPath string = "html/list.js"
+	jsTempC, err := os.ReadFile(jsPath)
+	if err != nil {
+		log.Println("错误：无法读取资源文件: ", err)
+	}
+	jsTemp = string(jsTempC)
 	var htmlPath string = "html/list.html"
 	file, err := os.Open(htmlPath)
 	if err != nil {
@@ -62,14 +69,14 @@ func genHTML() string {
 		body = strings.Replace(body, "!FILE!", v.FontPath, -1)
 		body = strings.Replace(body, "!VERSION!", strings.Replace(v.Version, "Version ", "", 1), -1)
 		if v.Monospaced > 0 {
-			body = strings.Replace(body, "!MONOSPACED!", "[字母等宽 "+strconv.Itoa(v.Monospaced)+"]", -1)
-			body = strings.Replace(body, "!MONOSPACEDC!", "monospaced", -1)
+			body = strings.Replace(body, "!MONOSPACED!", "[等宽 "+strconv.Itoa(v.Monospaced)+"]", -1)
+			body = strings.Replace(body, "!MONOSPACEDC!", " monospaced", -1)
 		} else {
 			body = strings.Replace(body, "!MONOSPACED!", "", -1)
 			body = strings.Replace(body, "!MONOSPACEDC!", "", -1)
 		}
 		if v.MonospacedZH > -2 {
-			if v.MonospacedZH > 0 {
+			if v.Monospaced > 0 && v.MonospacedZH > 0 {
 				body = strings.Replace(body, "!ZH!", "[中文等宽 "+strconv.Itoa(v.MonospacedZH)+"]", -1)
 				body = strings.Replace(body, "!ZHC!", " zh_monospaced", -1)
 			} else {
@@ -83,7 +90,7 @@ func genHTML() string {
 		bodys = append(bodys, body)
 	}
 	var body = strings.Join(bodys, "\n")
-	return strings.Replace(html, "<!-- body -->", body, 1)
+	return strings.Replace(html, "<!-- body -->", body+"\n<script>\n"+jsTemp+"\n</script>\n", 1)
 }
 
 func saveHTML() {

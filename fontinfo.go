@@ -38,7 +38,7 @@ func fontInfo() {
 			monospacedTotal += tpp[1]
 			chineseTotal += tpp[2]
 			chineseMonoTotal += tpp[3]
-			fmt.Printf("\r\033[K已完成: %d / %d ", total, fontPathListLen)
+			fmt.Printf("\r\033[K已完成: %d / %d (%d %%) ", total, fontPathListLen, total*100/uint(fontPathListLen))
 			mu.Unlock()
 			<-goroutineSem
 		}()
