@@ -60,7 +60,7 @@ func main() {
 	flag.IntVar(&imageHeight, "h", 78, "字体预览图高度")
 	flag.StringVar(&imageText, "t", "AaBbCc0123?.文字。", "字体预览图文字")
 	flag.StringVar(&pageTitle, "p", "MonospaceFontList", "网页标题前缀")
-	flag.IntVar(&maxGoroutines, "j", 0, "最大并发数")
+	flag.IntVar(&maxGoroutines, "j", 0, "最大并发数，默认为逻辑处理器数量。")
 	flag.Parse()
 
 	if maxGoroutines <= 0 {

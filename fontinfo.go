@@ -131,18 +131,20 @@ func isSupportsChinese(font *sfnt.Font) bool {
 		{0x2CEB0, 0x2EBEF}, // 6扩展F
 		{0x30000, 0x3134F}, // 7扩展G
 	}
+	var isOK int = 0
 	for i, rangeValue := range chineseUnicodeRanges {
 		if i > chineseChkLevel {
 			break
 		}
 		for runeValue := rune(rangeValue[0]); runeValue <= rune(rangeValue[1]); runeValue++ {
-			_, err := font.GlyphIndex(&sfnt.Buffer{}, runeValue)
-			if err != nil {
-				return false
+			r, err := font.GlyphIndex(&sfnt.Buffer{}, runeValue)
+			if err == nil && r != 0 {
+				isOK++
+				break
 			}
 		}
 	}
-	return true
+	return isOK == chineseChkLevel+1
 }
 
 func isMonospaced(font *sfnt.Font, testChars string) int {
