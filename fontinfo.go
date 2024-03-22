@@ -25,25 +25,37 @@ var (
 )
 
 func fontInfo() {
-	var goroutineSem chan struct{} = make(chan struct{}, maxGoroutines)
-	for i := range fontPathList {
-		goroutineSem <- struct{}{}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	if maxGoroutines == 1 {
+		for i := range fontPathList {
 			fontInfoN, tpp := work(i)
-			mu.Lock()
-			fontPathList[i] = fontInfoN
-			total += tpp[0]
-			monospacedTotal += tpp[1]
-			chineseTotal += tpp[2]
-			chineseMonoTotal += tpp[3]
-			fmt.Printf("\r\033[K已完成: %d / %d (%d %%) ", total, fontPathListLen, total*100/uint(fontPathListLen))
-			mu.Unlock()
-			<-goroutineSem
-		}()
+			workSave(i, fontInfoN, tpp)
+			fmt.Printf("\r\033[K已完成: %d / %d (%d %%)  ", total, fontPathListLen, total*100/uint(fontPathListLen))
+		}
+	} else {
+		var goroutineSem chan struct{} = make(chan struct{}, maxGoroutines)
+		for i := range fontPathList {
+			goroutineSem <- struct{}{}
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				fontInfoN, tpp := work(i)
+				mu.Lock()
+				workSave(i, fontInfoN, tpp)
+				fmt.Printf("\r\033[K已完成: %d / %d (%d %%) [并行 %d]  ", total, fontPathListLen, total*100/uint(fontPathListLen), len(goroutineSem))
+				mu.Unlock()
+				<-goroutineSem
+			}()
+		}
+		wg.Wait()
 	}
-	wg.Wait()
+}
+
+func workSave(i int, fontInfoN FontInfo, tpp [4]uint) {
+	fontPathList[i] = fontInfoN
+	total += tpp[0]
+	monospacedTotal += tpp[1]
+	chineseTotal += tpp[2]
+	chineseMonoTotal += tpp[3]
 }
 
 func work(i int) (FontInfo, [4]uint) {
@@ -177,8 +189,8 @@ func drew(fontFile []byte, name string) {
 
 	face, err := opentype.NewFace(f, &opentype.FaceOptions{
 		Size:    fontSize,
-		DPI:     72,
-		Hinting: font.HintingFull,
+		DPI:     fontDPI,
+		Hinting: font.Hinting(fontHinting),
 	})
 	if err != nil {
 		log.Println("创建字体face失败:", name, err)
