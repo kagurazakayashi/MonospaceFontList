@@ -1,3 +1,4 @@
+//go:generate goversioninfo -icon=ico/icon.ico -manifest=main.exe.manifest -arm=true
 package main
 
 import (
@@ -46,7 +47,7 @@ var (
 )
 
 func main() {
-	log.Println("MonospaceFontList v1.0.0")
+	log.Println("MonospaceFontList v1.1.0")
 	loadHTML()
 
 	flag.StringVar(&scanDir, "i", "", "要扫描的字体文件夹，默认为系统字体文件夹。")
